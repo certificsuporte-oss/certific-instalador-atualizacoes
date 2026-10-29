@@ -1,0 +1,70 @@
+# Publica uma versão do CertificInstalador.
+#
+# Como funciona: o script publicar.sh (no projeto do instalador) envia para o ramo "envio"
+# deste repositório uma pasta com:
+#   - CertificInstalador.exe   (o programa)
+#   - instalador.json          ({ "versao", "url", "sha512", "tamanho", "novidades" })
+#   - novidades.md             (texto da release)
+# Esta automação cria a release v<versão> com o EXE e só DEPOIS troca o instalador.json da release "atual"
+# (assim nenhum instalador tenta baixar um arquivo que ainda não existe). No fim, apaga o ramo "envio".
+
+name: Publicar versão
+
+on:
+  push:
+    branches: [envio]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: envio
+
+      - name: Ler a versão
+        id: dados
+        run: |
+          VERSAO=$(jq -r .versao envio/instalador.json)
+          echo "versao=$VERSAO" >> "$GITHUB_OUTPUT"
+          echo "Versão: $VERSAO"
+          ls -la envio
+          # confere se o EXE enviado é o mesmo descrito no instalador.json
+          ESPERADO=$(jq -r .sha512 envio/instalador.json)
+          REAL=$(openssl dgst -sha512 -binary envio/CertificInstalador.exe | base64 -w0)
+          test "$ESPERADO" = "$REAL" || { echo "SHA-512 do EXE não confere com o instalador.json"; exit 1; }
+
+      - name: Criar a release da versão com o EXE
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSAO: ${{ steps.dados.outputs.versao }}
+        run: |
+          TAG="v$VERSAO"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG já existe: substituindo o EXE."
+            gh release upload "$TAG" envio/CertificInstalador.exe --clobber
+            gh release edit "$TAG" --notes-file envio/novidades.md
+          else
+            gh release create "$TAG" envio/CertificInstalador.exe --target main --title "CertificInstalador $VERSAO" --notes-file envio/novidades.md --latest=false
+          fi
+
+      - name: Avisar os instaladores (release "atual")
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view atual >/dev/null 2>&1; then
+            gh release create atual --target main --title "Versão atual (não apagar)" \
+              --notes "Arquivo lido pelo CertificInstalador para saber qual é a versão mais nova. Não apague esta release." --latest=false
+          fi
+          gh release upload atual envio/instalador.json --clobber
+          echo "instalador.json atualizado."
+
+      - name: Limpar o ramo de envio
+        run: git push origin --delete envio || true
