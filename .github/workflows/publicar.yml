@@ -64,6 +64,8 @@ jobs:
               --notes "Arquivo lido pelo CertificInstalador para saber qual é a versão mais nova. Não apague esta release." --latest=false
           fi
           gh release upload atual envio/instalador.json --clobber
+          # link fixo para mandar aos tecnicos: .../releases/download/atual/CertificInstalador.exe (sempre a mais nova)
+          gh release upload atual envio/CertificInstalador.exe --clobber
           echo "instalador.json atualizado."
 
       - name: Limpar o ramo de envio

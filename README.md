@@ -4,7 +4,9 @@ Este repositório guarda **somente as versões publicadas** do CertificInstalado
 O próprio programa consulta este endereço ao abrir e se atualiza sozinho.
 
 - **Releases `v…`**: cada versão publicada, com o `CertificInstalador.exe`.
-- **Release `atual`**: arquivo `instalador.json`, que diz qual é a versão mais nova (versão, link, SHA-512 e tamanho).
+- **Link fixo para baixar sempre a versão mais nova** (para mandar no WhatsApp):
+  https://github.com/certificsuporte-oss/certific-instalador-atualizacoes/releases/download/atual/CertificInstalador.exe
+- **Release `atual`**: `CertificInstalador.exe` (a mais nova) e o arquivo `instalador.json`, que diz qual é a versão mais nova (versão, link, SHA-512 e tamanho).
 
 Não apague a release `atual`: sem ela, os instaladores não encontram as atualizações.
 
